@@ -1,0 +1,117 @@
+# AoC 2022 - Day 3
+
+```elixir
+Mix.install([
+  {:req, "~> 0.3.2"},
+  {:req_aoc, github: "mcrumm/req_aoc", ref: "28e3813"}
+])
+```
+
+## Get input
+
+```elixir
+input = ReqAOC.fetch!({2022, 03, System.fetch_env!("LB_AOC_SESSION")})
+```
+
+## Part 1
+
+```elixir
+defmodule Aoc do
+  @lower_chars "abcdefghijklmnopqrstuvwxyz"
+               |> String.graphemes()
+               |> Enum.with_index()
+               |> Map.new()
+
+  @upper_chars "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+               |> String.graphemes()
+               |> Enum.with_index()
+               |> Enum.map(fn {k, v} -> {k, v + 26} end)
+               |> Map.new()
+
+  def calculate(input) do
+    input
+    |> parse()
+    |> Enum.map(fn {first_half, second_half} ->
+      MapSet.intersection(MapSet.new(first_half), MapSet.new(second_half))
+    end)
+    |> Enum.map(fn ms -> ms |> MapSet.to_list() |> Enum.sum() end)
+    |> Enum.sum()
+  end
+
+  def parse(input) do
+    input
+    |> String.trim()
+    |> String.split("\n")
+    |> Enum.map(&split_rucksack/1)
+    |> Enum.map(&to_numeric/1)
+  end
+
+  defp split_rucksack(rucksack) do
+    len = trunc(String.length(rucksack) / 2)
+    rucksack = String.graphemes(rucksack)
+    Enum.split(rucksack, len)
+  end
+
+  defp to_numeric({first_half, second_half}) do
+    {to_numeric(first_half), to_numeric(second_half)}
+  end
+
+  defp to_numeric(chars) do
+    Enum.map(chars, fn char ->
+      (@lower_chars[char] || @upper_chars[char]) + 1
+    end)
+  end
+end
+
+Aoc.calculate(input)
+```
+
+## Part 2
+
+```elixir
+defmodule Aoc do
+  @lower_chars "abcdefghijklmnopqrstuvwxyz"
+               |> String.graphemes()
+               |> Enum.with_index()
+               |> Map.new()
+
+  @upper_chars "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+               |> String.graphemes()
+               |> Enum.with_index()
+               |> Enum.map(fn {k, v} -> {k, v + 26} end)
+               |> Map.new()
+
+  def calculate(input) do
+    input
+    |> parse()
+    |> Enum.map(&find_common/1)
+    |> Enum.map(fn ms -> ms |> MapSet.to_list() |> Enum.sum() end)
+    |> Enum.sum()
+  end
+
+  def find_common(group) do
+    group
+    |> Enum.reduce(fn rucksack, acc ->
+      MapSet.intersection(MapSet.new(rucksack), MapSet.new(acc))
+    end)
+  end
+
+  def parse(input) do
+    input
+    |> String.trim()
+    |> String.split("\n")
+    |> Enum.map(&to_numeric/1)
+    |> Enum.chunk_every(3)
+  end
+
+  defp to_numeric(rucksack) do
+    rucksack
+    |> String.graphemes()
+    |> Enum.map(fn char ->
+      (@lower_chars[char] || @upper_chars[char]) + 1
+    end)
+  end
+end
+
+Aoc.calculate(input)
+```

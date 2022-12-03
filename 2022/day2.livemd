@@ -1,0 +1,133 @@
+# AoC 2022 - Day 2
+
+```elixir
+Mix.install([
+  {:req, "~> 0.3.2"},
+  {:req_aoc, github: "mcrumm/req_aoc", ref: "28e3813"}
+])
+```
+
+## Get Input
+
+```elixir
+input = ReqAOC.fetch!({2022, 02, System.fetch_env!("LB_AOC_SESSION")})
+```
+
+## Part 1
+
+```elixir
+defmodule Processor do
+  @values %{
+    rock: 1,
+    paper: 2,
+    scissors: 3
+  }
+
+  def run(input) do
+    input
+    |> rounds()
+    |> Enum.map(&calculate/1)
+    |> Enum.sum()
+  end
+
+  def calculate({_theirs, ours} = round), do: @values[ours] + calculate_round(round)
+
+  defp calculate_round({theirs, ours}) when ours == theirs, do: 3
+
+  defp calculate_round({theirs, :rock}) do
+    case theirs do
+      :paper -> 0
+      :scissors -> 6
+    end
+  end
+
+  defp calculate_round({theirs, :paper}) do
+    case theirs do
+      :scissors -> 0
+      :rock -> 6
+    end
+  end
+
+  defp calculate_round({theirs, :scissors}) do
+    case theirs do
+      :rock -> 0
+      :paper -> 6
+    end
+  end
+
+  defp rounds(input) do
+    input |> String.trim() |> String.split("\n") |> Enum.map(&parse_pair/1)
+  end
+
+  defp parse_pair(pair) do
+    [ours, theirs] = String.split(pair, " ")
+    {to_atom(ours), to_atom(theirs)}
+  end
+
+  defp to_atom(char) when char in ["A", "X"], do: :rock
+  defp to_atom(char) when char in ["B", "Y"], do: :paper
+  defp to_atom(char) when char in ["C", "Z"], do: :scissors
+end
+
+Processor.run(input)
+```
+
+## Part 2
+
+```elixir
+defmodule Processor do
+  @values %{
+    rock: 1,
+    paper: 2,
+    scissors: 3
+  }
+
+  def run(input) do
+    input
+    |> rounds()
+    |> Enum.map(&calculate/1)
+    |> Enum.sum()
+  end
+
+  defp calculate({theirs, :draw}), do: 3 + @values[theirs]
+
+  defp calculate({:rock, strategy}) do
+    case strategy do
+      :loose -> 0 + @values.scissors
+      :win -> 6 + @values.paper
+    end
+  end
+
+  defp calculate({:paper, strategy}) do
+    case strategy do
+      :loose -> 0 + @values.rock
+      :win -> 6 + @values.scissors
+    end
+  end
+
+  defp calculate({:scissors, strategy}) do
+    case strategy do
+      :loose -> 0 + @values.paper
+      :win -> 6 + @values.rock
+    end
+  end
+
+  defp rounds(input) do
+    input |> String.trim() |> String.split("\n") |> Enum.map(&parse_pair/1)
+  end
+
+  defp parse_pair(pair) do
+    [ours, theirs] = String.split(pair, " ")
+    {to_atom(ours), to_atom(theirs)}
+  end
+
+  defp to_atom("A"), do: :rock
+  defp to_atom("B"), do: :paper
+  defp to_atom("C"), do: :scissors
+  defp to_atom("X"), do: :loose
+  defp to_atom("Y"), do: :draw
+  defp to_atom("Z"), do: :win
+end
+
+Processor.run(input)
+```
