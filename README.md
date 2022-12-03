@@ -1,1 +1,3 @@
-# advent-of-code
+# Advent of code
+
+Files for https://adventofcode.com/
