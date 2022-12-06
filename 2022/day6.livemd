@@ -1,0 +1,86 @@
+# AoC 2022 - Day 6
+
+```elixir
+Mix.install([
+  {:req, "~> 0.3.2"},
+  {:req_aoc, github: "mcrumm/req_aoc", ref: "28e3813"}
+])
+```
+
+## Get Input
+
+```elixir
+input = ReqAOC.fetch!({2022, 06, System.fetch_env!("LB_AOC_SESSION")})
+```
+
+## Part 1
+
+```elixir
+defmodule AoC do
+  def calculate(input, packet_size \\ 4) do
+    window_top = String.length(input) - packet_size
+
+    case Enum.reduce(0..window_top, &find_packet(input, packet_size, &1, &2)) do
+      {:found, len} -> len
+      {:not_found, nil} -> nil
+    end
+  end
+
+  defp find_packet(_input, _packet_size, _position, {:found, _len} = acc), do: acc
+
+  defp find_packet(input, packet_size, position, _acc) do
+    <<_head::binary-size(position), str::binary-size(packet_size), _rest::binary>> = input
+
+    all_unique? = str |> String.graphemes() |> Enum.uniq() |> length() == packet_size
+
+    if all_unique? do
+      {:found, position + packet_size}
+    else
+      {:not_found, nil}
+    end
+  end
+end
+
+test1 = {"mjqjpqmgbljsphdztnvjfqwrcgsmlb", 7}
+test2 = {"bvwbjplbgvbhsrlpgdmjqwftvncz", 5}
+test3 = {"nppdvjthqldpwncqszvftbrmjlhg", 6}
+test4 = {"nznrnfrfntjfmvfwmzdfjlvtqnbhcprsg", 10}
+test5 = {"zcfzfwzzqfrljwzlrfnpqdbhtmscgvjw", 11}
+tests = [test1, test2, test3, test4, test5]
+
+{test_input, _} = test1
+
+results =
+  for {input, expected} <- tests do
+    AoC.calculate(input) == expected
+  end
+
+IO.inspect(results)
+
+AoC.calculate(test_input)
+AoC.calculate(input)
+```
+
+Part 2
+
+```elixir
+packet_size = 14
+test1 = {"mjqjpqmgbljsphdztnvjfqwrcgsmlb", 19}
+test2 = {"bvwbjplbgvbhsrlpgdmjqwftvncz", 23}
+test3 = {"nppdvjthqldpwncqszvftbrmjlhg", 23}
+test4 = {"nznrnfrfntjfmvfwmzdfjlvtqnbhcprsg", 29}
+test5 = {"zcfzfwzzqfrljwzlrfnpqdbhtmscgvjw", 26}
+tests = [test1, test2, test3, test4, test5]
+
+{test_input, _} = test1
+
+results =
+  for {input, expected} <- tests do
+    AoC.calculate(input, packet_size) == expected
+  end
+
+IO.inspect(results)
+
+AoC.calculate(test_input, packet_size)
+AoC.calculate(input, packet_size)
+```
