@@ -1,0 +1,105 @@
+# AoC 2022 - Day 4
+
+```elixir
+Mix.install([
+  {:req, "~> 0.3.2"},
+  {:req_aoc, github: "mcrumm/req_aoc", ref: "28e3813"}
+])
+```
+
+## Get input
+
+```elixir
+input = ReqAOC.fetch!({2022, 04, System.fetch_env!("LB_AOC_SESSION")})
+```
+
+## Part 1
+
+```elixir
+defmodule AoC do
+  def calculate(input) do
+    input
+    |> parse()
+    |> Enum.reduce(0, fn pair, acc -> if ranges_contained?(pair), do: acc, else: acc + 1 end)
+  end
+
+  def parse(input) do
+    input
+    |> String.trim()
+    |> String.split("\n")
+    |> Enum.map(&parse_pair/1)
+  end
+
+  def parse_pair(pair) do
+    [pair1, pair2] = String.split(pair, ",")
+
+    [pair1_min, pair1_max] = pair1 |> String.split("-") |> Enum.map(&String.to_integer/1)
+    [pair2_min, pair2_max] = pair2 |> String.split("-") |> Enum.map(&String.to_integer/1)
+
+    {pair1_min..pair1_max, pair2_min..pair2_max}
+  end
+
+  def ranges_contained?({r1_min..r1_max, r2_min..r2_max}) do
+    (r1_min > r2_min and r1_max > r2_max) or (r2_min > r1_min and r2_max > r1_max)
+  end
+end
+
+test_input = """
+2-4,6-8
+2-3,4-5
+5-7,7-9
+2-8,3-7
+6-6,4-6
+2-6,4-8
+"""
+
+# AoC.calculate(test_input)
+AoC.calculate(input)
+```
+
+## Part 2
+
+```elixir
+defmodule AoC2 do
+  def calculate(input) do
+    input
+    |> parse()
+    |> Enum.reduce(0, fn pair, acc -> if range_contains?(pair), do: acc + 1, else: acc end)
+  end
+
+  def parse(input) do
+    input
+    |> String.trim()
+    |> String.split("\n")
+    |> Enum.map(&parse_pair/1)
+  end
+
+  def parse_pair(pair) do
+    [pair1, pair2] = String.split(pair, ",")
+
+    [pair1_min, pair1_max] = pair1 |> String.split("-") |> Enum.map(&String.to_integer/1)
+    [pair2_min, pair2_max] = pair2 |> String.split("-") |> Enum.map(&String.to_integer/1)
+
+    {pair1_min..pair1_max, pair2_min..pair2_max}
+  end
+
+  def range_contains?({r1, r2}) do
+    l1 = Enum.to_list(r1)
+    l2 = Enum.to_list(r2)
+
+    MapSet.intersection(MapSet.new(l1), MapSet.new(l2)) |> Enum.to_list() |> length() > 0
+  end
+end
+
+test_input = """
+2-4,6-8
+2-3,4-5
+5-7,7-9
+2-8,3-7
+6-6,4-6
+2-6,4-8
+"""
+
+# AoC2.calculate(test_input)
+AoC2.calculate(input)
+```

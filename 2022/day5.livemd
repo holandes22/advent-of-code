@@ -1,0 +1,219 @@
+# AoC 2022 - Day 5
+
+```elixir
+Mix.install([
+  {:req, "~> 0.3.2"},
+  {:req_aoc, github: "mcrumm/req_aoc", ref: "28e3813"}
+])
+```
+
+## Get input
+
+```elixir
+input = ReqAOC.fetch!({2022, 05, System.fetch_env!("LB_AOC_SESSION")})
+```
+
+## Part 1
+
+```elixir
+defmodule AoC1 do
+  @ins_re ~r/move (?<move>[[:digit:]]+) from (?<from>[[:digit:]]+) to (?<to>[[:digit:]]+)/
+
+  def calculate(input) do
+    input
+    |> parse()
+    |> apply_instructions()
+    |> Enum.reduce("", fn [top | _], acc -> acc <> top end)
+  end
+
+  def parse(input) do
+    [graph, instructions] = String.split(input, "\n\n")
+
+    {positions, lines} = graph |> String.split("\n") |> List.pop_at(-1)
+
+    graph =
+      lines
+      |> Enum.map(&parse_graph_line(&1, positions))
+      |> Enum.zip()
+      |> Enum.map(&Tuple.to_list/1)
+      |> Enum.map(fn col -> Enum.reject(col, fn e -> e == " " end) end)
+
+    instructions =
+      instructions
+      |> String.trim()
+      |> String.split("\n")
+      |> Enum.map(&parse_instructions_line/1)
+
+    {graph, instructions}
+  end
+
+  defp apply_instructions({graph, instructions}) do
+    Enum.reduce(instructions, graph, fn instruction, graph ->
+      %{"move" => move_count, "from" => from_idx, "to" => to_idx} = instruction
+
+      from_idx = from_idx - 1
+      to_idx = to_idx - 1
+      from_col = Enum.at(graph, from_idx)
+      to_col = Enum.at(graph, to_idx)
+
+      # 1st element of the list (column) is the top element from the column in the graph
+      # take from the top up to count and reverse as the elements are placed inversely
+      # in the destination column
+      elems = from_col |> Enum.slice(0..(move_count - 1)) |> Enum.reverse()
+
+      # Add the elems to the destination line 
+      to_col = elems ++ to_col
+      from_col = Enum.slice(from_col, move_count..-1)
+
+      # replace the lines in the new graph
+
+      graph
+      |> List.replace_at(from_idx, from_col)
+      |> List.replace_at(to_idx, to_col)
+    end)
+  end
+
+  defp parse_graph_line(line, positions) do
+    positions = String.graphemes(positions)
+    chars = String.graphemes(line)
+
+    for n <- Enum.reject(positions, fn c -> c == " " end) do
+      index = Enum.find_index(positions, fn p -> p == n end)
+      Enum.at(chars, index)
+    end
+  end
+
+  defp parse_instructions_line(line) do
+    @ins_re
+    |> Regex.named_captures(line)
+    |> Enum.map(fn {k, v} ->
+      {k, String.to_integer(v)}
+    end)
+    |> Enum.into(%{})
+  end
+end
+
+test_input = """
+    [D]    
+[N] [C]    
+[Z] [M] [P]
+ 1   2   3 
+
+move 1 from 2 to 1
+move 3 from 1 to 3
+move 2 from 2 to 1
+move 1 from 1 to 2
+"""
+
+test_expected = """
+        [Z]
+        [N]
+        [D]
+[C] [M] [P]
+ 1   2   3
+"""
+
+AoC1.calculate(test_input)
+AoC1.calculate(input)
+```
+
+## Part 2
+
+```elixir
+defmodule AoC2 do
+  @ins_re ~r/move (?<move>[[:digit:]]+) from (?<from>[[:digit:]]+) to (?<to>[[:digit:]]+)/
+
+  def calculate(input) do
+    input
+    |> parse()
+    |> apply_instructions()
+    |> Enum.reduce("", fn [top | _], acc -> acc <> top end)
+  end
+
+  def parse(input) do
+    [graph, instructions] = String.split(input, "\n\n")
+
+    {positions, lines} = graph |> String.split("\n") |> List.pop_at(-1)
+
+    graph =
+      lines
+      |> Enum.map(&parse_graph_line(&1, positions))
+      |> Enum.zip()
+      |> Enum.map(&Tuple.to_list/1)
+      |> Enum.map(fn col -> Enum.reject(col, fn e -> e == " " end) end)
+
+    instructions =
+      instructions
+      |> String.trim()
+      |> String.split("\n")
+      |> Enum.map(&parse_instructions_line/1)
+
+    {graph, instructions}
+  end
+
+  defp apply_instructions({graph, instructions}) do
+    Enum.reduce(instructions, graph, fn instruction, graph ->
+      %{"move" => move_count, "from" => from_idx, "to" => to_idx} = instruction
+
+      from_idx = from_idx - 1
+      to_idx = to_idx - 1
+      from_col = Enum.at(graph, from_idx)
+      to_col = Enum.at(graph, to_idx)
+
+      elems = from_col |> Enum.slice(0..(move_count - 1))
+
+      # Add the elems to the destination line 
+      to_col = elems ++ to_col
+      from_col = Enum.slice(from_col, move_count..-1)
+
+      # replace the lines in the new graph
+
+      graph
+      |> List.replace_at(from_idx, from_col)
+      |> List.replace_at(to_idx, to_col)
+    end)
+  end
+
+  defp parse_graph_line(line, positions) do
+    positions = String.graphemes(positions)
+    chars = String.graphemes(line)
+
+    for n <- Enum.reject(positions, fn c -> c == " " end) do
+      index = Enum.find_index(positions, fn p -> p == n end)
+      Enum.at(chars, index)
+    end
+  end
+
+  defp parse_instructions_line(line) do
+    @ins_re
+    |> Regex.named_captures(line)
+    |> Enum.map(fn {k, v} ->
+      {k, String.to_integer(v)}
+    end)
+    |> Enum.into(%{})
+  end
+end
+
+test_input = """
+    [D]    
+[N] [C]    
+[Z] [M] [P]
+ 1   2   3 
+
+move 1 from 2 to 1
+move 3 from 1 to 3
+move 2 from 2 to 1
+move 1 from 1 to 2
+"""
+
+test_expected = """
+        [D]
+        [N]
+        [Z]
+[M] [C] [P]
+ 1   2   3
+"""
+
+AoC2.calculate(test_input)
+AoC2.calculate(input)
+```
