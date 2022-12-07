@@ -1,0 +1,163 @@
+# AoC 2022 - Day 7
+
+```elixir
+Mix.install([
+  {:req, "~> 0.3.2"},
+  {:req_aoc, github: "mcrumm/req_aoc", ref: "28e3813"}
+])
+```
+
+## Get input
+
+```elixir
+input = ReqAOC.fetch!({2022, 07, System.fetch_env!("LB_AOC_SESSION")})
+```
+
+## Part 1
+
+```elixir
+defmodule AoC do
+  def calculate(input) do
+    input
+    |> parse()
+    |> get_dir_sizes()
+    |> Enum.reject(fn v -> v >= 100_000 end)
+    |> Enum.sum()
+  end
+
+  def get_dir_sizes(tree, include_root \\ true) do
+    keys = if include_root, do: [:tree, "/"], else: [:tree]
+
+    {dir_sizes, _total} =
+      tree
+      |> get_in(keys)
+      |> calculate_sizes()
+
+    dir_sizes
+  end
+
+  def parse(input) do
+    input
+    |> String.trim()
+    |> String.split("\n")
+    |> build_tree()
+  end
+
+  def calculate_sizes(%{} = dir) do
+    Enum.reduce(dir, {[], 0}, fn {_key, value}, {dir_sizes, acc} ->
+      case value do
+        %{} ->
+          {dir_sizes_, dir_size} = calculate_sizes(value)
+          {dir_sizes ++ dir_sizes_ ++ [dir_size], acc + dir_size}
+
+        file_size ->
+          {dir_sizes, acc + file_size}
+      end
+    end)
+  end
+
+  def build_tree(commands) do
+    initial_state = %{tree: %{}, location: [], files_from_dir: nil}
+
+    Enum.reduce(commands, initial_state, fn command, state ->
+      case command do
+        "$ ls" ->
+          state
+
+        "$ cd " <> dir ->
+          tree = update_tree(state.tree, state.location, dir)
+          location = update_location(state.location, dir)
+          %{state | location: location, tree: tree}
+
+        "dir " <> dir ->
+          tree = update_tree(state.tree, state.location, dir)
+          %{state | files_from_dir: dir, tree: tree}
+
+        file_line ->
+          [size, file] = String.split(file_line, " ")
+          tree = update_tree(state.tree, state.location, {file, size})
+          %{state | tree: tree}
+      end
+    end)
+  end
+
+  def update_tree(tree, _location, ".."), do: tree
+
+  def update_tree(tree, location, {file, size}) do
+    put_in(tree, location ++ [file], String.to_integer(size))
+  end
+
+  def update_tree(tree, location, dir), do: put_in(tree, location ++ [dir], %{})
+
+  def update_location(location, ".."), do: List.delete_at(location, -1)
+  def update_location(location, dirname), do: location ++ [dirname]
+end
+
+test_input = """
+$ cd /
+$ ls
+dir a
+14848514 b.txt
+8504156 c.dat
+dir d
+$ cd a
+$ ls
+dir e
+29116 f
+2557 g
+62596 h.lst
+$ cd e
+$ ls
+584 i
+$ cd ..
+$ cd ..
+$ cd d
+$ ls
+4060174 j
+8033020 d.log
+5626152 d.ext
+7214296 k
+"""
+
+# re = ~r/(?<file_size>[[:digit:]]+)[[:space:]].*/
+
+# test_input 
+# |> String.trim() 
+# |> String.split("$ ls") 
+# |> Enum.map(fn output -> 
+#   lines = output |> String.trim() |> String.split("\n")
+# end)
+# |> Enum.map(fn lines -> 
+#   Enum.filter(lines, &Regex.match?(re, &1))
+# end)
+# |> Enum.reject(&Enum.empty?/1)
+# |> Enum.map(fn dir -> 
+#   Enum.map(dir, fn file_line ->
+#       [size, _name] = String.split(file_line, " ")
+#       String.to_integer(size)
+#   end) 
+#   #|> IO.inspect()
+#   #|> Enum.reject(fn sizes -> Enum.sum(sizes) >= 100000 end)
+# end)
+# |> Enum.reject(fn sizes -> Enum.sum(sizes) >= 100000 end)
+# |> IO.inspect()
+# |> Enum.map(&Enum.sum/1)
+# |> IO.inspect()
+
+AoC.calculate(test_input)
+# AoC.calculate(input)
+```
+
+## Part 2
+
+```elixir
+total_disk_space = 70_000_000
+space_target = 30_000_000
+
+dir_sizes = input |> AoC.parse() |> AoC.get_dir_sizes(false)
+
+unused_space = total_disk_space - Enum.max(dir_sizes)
+need_to_free = space_target - unused_space
+
+best_option = dir_sizes |> Enum.reject(fn size -> size <= need_to_free end) |> Enum.min()
+```
