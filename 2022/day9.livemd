@@ -1,0 +1,143 @@
+# AoC 2022 - Day 9
+
+```elixir
+Mix.install([
+  {:req, "~> 0.3.2"},
+  {:req_aoc, github: "mcrumm/req_aoc", ref: "28e3813"}
+])
+```
+
+## Get input
+
+```elixir
+input = ReqAOC.fetch!({2022, 09, System.fetch_env!("LB_AOC_SESSION")})
+```
+
+## Part 1
+
+```elixir
+defmodule AoC do
+  def calculate(input) do
+    state = %{
+      h_coords: {0, 0},
+      t_coords: {0, 0},
+      visited: []
+    }
+
+    input
+    |> parse()
+    |> Enum.reduce(state, fn {direction, amount}, state ->
+      IO.inspect(state, label: "before #{direction}, #{amount}")
+
+      Enum.reduce(1..amount, state, fn _, state ->
+        # state =
+        #   if state.should_tail_move? do
+        #     # update tail position and add a visited coord
+        #     visited = [state.t_coords] ++ state.visited
+        #     t_coords = state.h_prev_coords
+        #     %{state | visited: visited, t_coords: t_coords}
+        #   else
+        #     state
+        #   end
+
+        new_h_coords = new_position(state.h_coords, direction)
+        should_tail_move? = should_tail_move?(new_h_coords, state.t_coords)
+
+        new_t_coords =
+          if should_tail_move? do
+            # IO.inspect({h_coords, state.t_coords}, label: "MOVING")
+            # update tail position
+            t_coords = state.t_coords
+            {_x, h_y} = new_h_coords
+            {_x, t_y} = t_coords
+
+            if t_y != h_y do
+              # If Tail moved up, we need to move diagonally
+              new_position(t_coords, direction)
+            else
+              # else, just go to previous position of the head
+              state.h_coords
+            end
+          else
+            state.t_coords
+          end
+
+        visited =
+          if new_t_coords != state.t_coords do
+            [new_t_coords] ++ state.visited
+          else
+            state.visited
+          end
+
+        state = %{state | h_coords: new_h_coords, t_coords: new_t_coords, visited: visited}
+
+        if direction in ["R", "U"] and amount == 4 do
+          IO.inspect(state, label: "mid state")
+        else
+          state
+        end
+      end)
+      |> IO.inspect(label: "after")
+    end)
+    |> Map.get(:visited)
+    |> Enum.uniq()
+    |> Enum.count()
+  end
+
+  def new_position({x, y}, direction) do
+    case direction do
+      "U" ->
+        {x, y + 1}
+
+      "D" ->
+        {x, y - 1}
+
+      "R" ->
+        {x + 1, y}
+
+      "L" ->
+        {x - 1, y}
+    end
+  end
+
+  # Tail should move if it is no longer adjacent
+  # So if it is in a diagonal or 2 spaces apart in every direction
+
+  def should_tail_move?(h_coords, t_coords) when h_coords == t_coords, do: false
+
+  def should_tail_move?({h_x, h_y}, {t_x, t_y}) when h_x == t_x do
+    abs(h_y - t_y) > 1
+  end
+
+  def should_tail_move?({h_x, h_y}, {t_x, t_y}) when h_y == t_y do
+    abs(h_x - t_x) > 1
+  end
+
+  # seems to be diagonal as nothing else matched
+  def should_tail_move?(_h_coords, _t_coords), do: true
+
+  def parse(input) do
+    input
+    |> String.trim()
+    |> String.split("\n")
+    |> Enum.map(fn line ->
+      [direction, amount] = String.split(line)
+      {direction, String.to_integer(amount)}
+    end)
+  end
+end
+
+test_input = """
+R 4
+U 4
+L 3
+D 1
+R 4
+D 1
+L 5
+R 2
+"""
+
+AoC.calculate(test_input)
+# AoC.calculate(input)
+```
