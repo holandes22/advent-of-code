@@ -43,33 +43,35 @@ defmodule AoC do
         new_h_coords = new_position(state.h_coords, direction)
         should_tail_move? = should_tail_move?(new_h_coords, state.t_coords)
 
-        new_t_coords =
+        state =
           if should_tail_move? do
             # IO.inspect({h_coords, state.t_coords}, label: "MOVING")
-            # update tail position
+            # update tail position and visited
+
             t_coords = state.t_coords
             {_x, h_y} = new_h_coords
             {_x, t_y} = t_coords
 
-            if t_y != h_y do
-              # If Tail moved up, we need to move diagonally
-              new_position(t_coords, direction)
-            else
-              # else, just go to previous position of the head
-              state.h_coords
-            end
+            new_t_coords =
+              if t_y != h_y do
+                # If Tail moved up or down, we need to move diagonally
+                # 1st, move in the up or down direction
+                {_x, new_y} = new_position(t_coords, direction)
+                # then move left or right accordingly
+                {new_x, _y} = new_h_coords
+                {new_x, new_y}
+              else
+                # else, just go to previous position of the head
+                state.h_coords
+              end
+
+            visited = [new_t_coords] ++ state.visited
+            %{state | t_coords: new_t_coords, visited: visited}
           else
-            state.t_coords
+            state
           end
 
-        visited =
-          if new_t_coords != state.t_coords do
-            [new_t_coords] ++ state.visited
-          else
-            state.visited
-          end
-
-        state = %{state | h_coords: new_h_coords, t_coords: new_t_coords, visited: visited}
+        state = %{state | h_coords: new_h_coords}
 
         if direction in ["R", "U"] and amount == 4 do
           IO.inspect(state, label: "mid state")
@@ -126,17 +128,6 @@ defmodule AoC do
     end)
   end
 end
-
-test_input = """
-R 4
-U 4
-L 3
-D 1
-R 4
-D 1
-L 5
-R 2
-"""
 
 AoC.calculate(test_input)
 # AoC.calculate(input)
