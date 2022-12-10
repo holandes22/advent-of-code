@@ -1,0 +1,292 @@
+# AoC 2022 - Day 10
+
+```elixir
+Mix.install([
+  {:req, "~> 0.3.2"},
+  {:req_aoc, github: "mcrumm/req_aoc", ref: "28e3813"}
+])
+```
+
+## Get input
+
+```elixir
+input = ReqAOC.fetch!({2022, 10, System.fetch_env!("LB_AOC_SESSION")})
+```
+
+```elixir
+test_input = """
+addx 15
+addx -11
+addx 6
+addx -3
+addx 5
+addx -1
+addx -8
+addx 13
+addx 4
+noop
+addx -1
+addx 5
+addx -1
+addx 5
+addx -1
+addx 5
+addx -1
+addx 5
+addx -1
+addx -35
+addx 1
+addx 24
+addx -19
+addx 1
+addx 16
+addx -11
+noop
+noop
+addx 21
+addx -15
+noop
+noop
+addx -3
+addx 9
+addx 1
+addx -3
+addx 8
+addx 1
+addx 5
+noop
+noop
+noop
+noop
+noop
+addx -36
+noop
+addx 1
+addx 7
+noop
+noop
+noop
+addx 2
+addx 6
+noop
+noop
+noop
+noop
+noop
+addx 1
+noop
+noop
+addx 7
+addx 1
+noop
+addx -13
+addx 13
+addx 7
+noop
+addx 1
+addx -33
+noop
+noop
+noop
+addx 2
+noop
+noop
+noop
+addx 8
+noop
+addx -1
+addx 2
+addx 1
+noop
+addx 17
+addx -9
+addx 1
+addx 1
+addx -3
+addx 11
+noop
+noop
+addx 1
+noop
+addx 1
+noop
+noop
+addx -13
+addx -19
+addx 1
+addx 3
+addx 26
+addx -30
+addx 12
+addx -1
+addx 3
+addx 1
+noop
+noop
+noop
+addx -9
+addx 18
+addx 1
+addx 2
+noop
+noop
+addx 9
+noop
+noop
+noop
+addx -1
+addx 2
+addx -37
+addx 1
+addx 3
+noop
+addx 15
+addx -21
+addx 22
+addx -6
+addx 1
+noop
+addx 2
+addx 1
+noop
+addx -10
+noop
+noop
+addx 20
+addx 1
+addx 2
+addx 2
+addx -6
+addx -11
+noop
+noop
+noop
+"""
+```
+
+## Part 1
+
+```elixir
+defmodule AoC do
+  def calculate(input) do
+    state = %{
+      cycle: 1,
+      reg_value: 1,
+      reg_values: []
+    }
+
+    input
+    |> parse()
+    |> Enum.reduce(state, fn ins, state ->
+      state = update_state(ins, state)
+
+      reg_values =
+        if state.cycle in [20, 60, 100, 140, 180, 220] do
+          [state.cycle * state.reg_value] ++ state.reg_values
+        else
+          state.reg_values
+        end
+
+      state = %{state | reg_values: reg_values}
+
+      IO.inspect(state)
+    end)
+    |> Map.get(:reg_values)
+    |> Enum.sum()
+  end
+
+  def update_state(:noop, state), do: %{state | cycle: state.cycle + 1}
+
+  def update_state(value, %{cycle: cycle, reg_value: reg_value} = state) do
+    %{state | reg_value: reg_value + value, cycle: cycle + 1}
+  end
+
+  def parse(input) do
+    input
+    |> String.trim()
+    |> String.split("\n")
+    |> Enum.map(fn line ->
+      case line do
+        "noop" ->
+          [:noop]
+
+        "addx " <> value ->
+          [:noop, String.to_integer(value)]
+      end
+    end)
+    |> List.flatten()
+  end
+end
+
+AoC.calculate(test_input)
+AoC.calculate(input)
+```
+
+## Part 2
+
+```elixir
+defmodule AoC2 do
+  def calculate(input) do
+    state = %{
+      reg_value: 1,
+      pixel_idx: 0,
+      crt: [],
+      cycle: 1
+    }
+
+    input
+    |> parse()
+    |> Enum.reduce(state, fn ins, state ->
+      pixel_idx =
+        if state.cycle in [40, 80, 120, 160, 200, 240] do
+          0
+        else
+          state.pixel_idx + 1
+        end
+
+      sprite_index = state.reg_value
+      sprite = (sprite_index - 1)..(sprite_index + 1)
+
+      char =
+        if state.pixel_idx in sprite do
+          "#"
+        else
+          "."
+        end
+
+      state = update_state(ins, state)
+
+      state = %{state | pixel_idx: pixel_idx, crt: [char] ++ state.crt, cycle: state.cycle + 1}
+    end)
+    |> Map.get(:crt)
+    |> Enum.reverse()
+    |> Enum.chunk_every(40)
+    |> Enum.map(&IO.puts/1)
+  end
+
+  def update_state(:noop, state), do: state
+
+  def update_state(value, %{reg_value: reg_value} = state) do
+    %{state | reg_value: reg_value + value}
+  end
+
+  def parse(input) do
+    input
+    |> String.trim()
+    |> String.split("\n")
+    |> Enum.map(fn line ->
+      case line do
+        "noop" ->
+          [:noop]
+
+        "addx " <> value ->
+          [:noop, String.to_integer(value)]
+      end
+    end)
+    |> List.flatten()
+  end
+end
+
+# AoC2.calculate(test_input)
+AoC2.calculate(input)
+```

@@ -1,0 +1,181 @@
+# AoC 2022 - Day 11
+
+```elixir
+Mix.install([
+  {:req, "~> 0.3.2"},
+  {:req_aoc, github: "mcrumm/req_aoc", ref: "28e3813"}
+])
+```
+
+## Get input
+
+```elixir
+input = ReqAOC.fetch!({2022, 11, System.fetch_env!("LB_AOC_SESSION")})
+```
+
+```elixir
+test_input = """
+Monkey 0:
+  Starting items: 79, 98
+  Operation: new = old * 19
+  Test: divisible by 23
+    If true: throw to monkey 2
+    If false: throw to monkey 3
+
+Monkey 1:
+  Starting items: 54, 65, 75, 74
+  Operation: new = old + 6
+  Test: divisible by 19
+    If true: throw to monkey 2
+    If false: throw to monkey 0
+
+Monkey 2:
+  Starting items: 79, 60, 97
+  Operation: new = old * old
+  Test: divisible by 13
+    If true: throw to monkey 1
+    If false: throw to monkey 3
+
+Monkey 3:
+  Starting items: 74
+  Operation: new = old + 3
+  Test: divisible by 17
+    If true: throw to monkey 0
+    If false: throw to monkey 1
+"""
+```
+
+```elixir
+defmodule Monkey do
+  @part 1
+  # operation is a tuple of {left_operand, operation, right_operand}
+  # where l or r can be an :old atom or an integer and operation a string of * or +
+
+  # logic is a map indicating the logic
+  # %{divisible_by: <int>, if_true: <int>, if_false: <int>}
+  defstruct items: [], operation: {}, logic: %{}, inspected: 0
+
+  def new(items, {left, op, right}, logic) do
+    operation = %{left: left, op: op, right: right}
+    %Monkey{items: items, operation: operation, logic: logic}
+  end
+
+  def inspect(%Monkey{items: items, logic: logic} = monkey) do
+    Enum.map_reduce(items, monkey, fn worry_level, acc ->
+      operation = monkey.operation
+
+      left_operand = if operation.left == :old, do: worry_level, else: operation.left
+      right_operand = if operation.right == :old, do: worry_level, else: operation.right
+
+      worry_level =
+        apply(Kernel, String.to_existing_atom(operation.op), [left_operand, right_operand])
+
+      worry_level =
+        if @part == 1 do
+          worry_level = Float.floor(worry_level / 3) |> trunc()
+        else
+          worry_level
+        end
+
+      to_monkey_idx =
+        if rem(worry_level, logic.divisible_by) == 0 do
+          logic.if_true
+        else
+          logic.if_false
+        end
+
+      monkey = %Monkey{acc | items: [], inspected: acc.inspected + 1}
+
+      {{to_monkey_idx, worry_level}, monkey}
+    end)
+  end
+
+  def catch_item(%Monkey{items: items} = monkey, item) do
+    %{monkey | items: items ++ [item]}
+  end
+end
+
+defmodule AoC do
+  def calculate(input) do
+    monkeys = parse(input)
+
+    max_rounds = 20
+
+    [max1, max2] =
+      Enum.reduce(1..max_rounds, monkeys, fn _round, acc ->
+        calculate_round(acc)
+      end)
+      |> Enum.map(&Map.get(&1, :inspected))
+      |> Enum.sort(:desc)
+      |> Enum.slice(0..1)
+
+    max1 * max2
+  end
+
+  def calculate_round(monkeys) do
+    monkeys
+    |> Enum.with_index()
+    |> Enum.reduce(monkeys, fn {_monkey, monkey_idx}, acc ->
+      monkey = Enum.at(acc, monkey_idx)
+      {items_to_throw, updated_monkey} = Monkey.inspect(monkey)
+
+      acc = List.replace_at(acc, monkey_idx, updated_monkey)
+
+      Enum.reduce(items_to_throw, acc, fn {to_monkey_idx, worry_level}, acc ->
+        monkey = Enum.at(acc, to_monkey_idx)
+        updated_monkey = Monkey.catch_item(monkey, worry_level)
+        List.replace_at(acc, to_monkey_idx, updated_monkey)
+      end)
+    end)
+  end
+
+  def parse(input) do
+    input
+    |> String.trim()
+    |> String.split("\n\n")
+    |> Enum.map(&parse_monkey/1)
+  end
+
+  def parse_monkey(section) do
+    # section lines
+    lines = section |> String.trim() |> String.split("\n")
+    [_number, starting_items_line, op_line, test_line, true_line, false_line] = lines
+
+    # items
+    [_, items_str] = String.split(starting_items_line, ": ")
+    items = items_str |> String.split(", ") |> Enum.map(&String.to_integer/1)
+
+    # operation
+    [_, op_str] = String.split(op_line, "= ")
+    [lo, op, ro] = op_str |> String.split()
+
+    lo = if lo == "old", do: :old, else: String.to_integer(lo)
+    ro = if ro == "old", do: :old, else: String.to_integer(ro)
+
+    operation = {lo, op, ro}
+
+    # logic
+    divisible_by = line_to_int(test_line, "divisible by ")
+    if_true = line_to_int(true_line, "throw to monkey ")
+    if_false = line_to_int(false_line, "throw to monkey ")
+
+    logic = %{divisible_by: divisible_by, if_true: if_true, if_false: if_false}
+
+    Monkey.new(items, operation, logic)
+  end
+
+  def line_to_int(line, sep) do
+    [_, str] = String.split(line, sep)
+    String.to_integer(str)
+  end
+end
+
+AoC.calculate(test_input)
+# AoC.calculate(input)
+```
+
+## Part 2
+
+```elixir
+
+```
